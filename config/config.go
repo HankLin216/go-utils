@@ -55,8 +55,12 @@ func New(l *zap.Logger, opts ...Option) Config {
 	for _, opt := range opts {
 		opt(&o)
 	}
-	if l != nil {
-		logger, _ = zap.NewProduction()
+	if l == nil {
+		nl, err := zap.NewProduction()
+		if err != nil {
+			panic(err)
+		}
+		logger = nl
 	} else {
 		logger = l
 	}
