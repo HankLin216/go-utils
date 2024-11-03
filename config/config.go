@@ -33,6 +33,7 @@ type Config interface {
 	Value(key string) Value
 	Watch(key string, o Observer) error
 	Close() error
+	SetLogger(l *zap.Logger)
 }
 
 type config struct {
@@ -41,10 +42,6 @@ type config struct {
 	cached    sync.Map
 	observers sync.Map
 	watchers  []Watcher
-}
-
-func init() {
-	logger, _ = zap.NewProduction()
 }
 
 // New a config with options.
@@ -59,10 +56,17 @@ func New(opts ...Option) Config {
 	for _, opt := range opts {
 		opt(&o)
 	}
+
+	logger, _ = zap.NewProduction()
+
 	return &config{
 		opts:   o,
 		reader: newReader(o),
 	}
+}
+
+func (c *config) SetLogger(l *zap.Logger) {
+	logger = l
 }
 
 func (c *config) watch(w Watcher) {
