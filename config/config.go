@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"dario.cat/mergo"
+	"github.com/HankLin216/go-utils/log"
 	"go.uber.org/zap"
 
 	// init encoding
@@ -32,7 +33,6 @@ type Config interface {
 	Value(key string) Value
 	Watch(key string, o Observer) error
 	Close() error
-	SetLogger(logger *zap.Logger)
 }
 
 type config struct {
@@ -41,16 +41,10 @@ type config struct {
 	cached    sync.Map
 	observers sync.Map
 	watchers  []Watcher
-
-	logger *zap.Logger
 }
 
 // New a config with options.
 func New(opts ...Option) Config {
-	logger, err := zap.NewProduction()
-	if err != nil {
-		panic(err)
-	}
 	o := options{
 		decoder:  defaultDecoder,
 		resolver: defaultResolver,
@@ -62,14 +56,9 @@ func New(opts ...Option) Config {
 		opt(&o)
 	}
 	return &config{
-		logger: logger,
 		opts:   o,
 		reader: newReader(o),
 	}
-}
-
-func (c *config) SetLogger(logger *zap.Logger) {
-	c.logger = logger
 }
 
 func (c *config) watch(w Watcher) {
@@ -77,19 +66,19 @@ func (c *config) watch(w Watcher) {
 		kvs, err := w.Next()
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
-				c.logger.Info("watcher's ctx cancel", zap.Error(err))
+				log.Info("watcher's ctx cancel", zap.Error(err))
 				return
 			}
 			time.Sleep(time.Second)
-			c.logger.Error("failed to watch next config", zap.Error(err))
+			log.Error("failed to watch next config", zap.Error(err))
 			continue
 		}
 		if err := c.reader.Merge(kvs...); err != nil {
-			c.logger.Error("failed to merge next config", zap.Error(err))
+			log.Error("failed to merge next config", zap.Error(err))
 			continue
 		}
 		if err := c.reader.Resolve(); err != nil {
-			c.logger.Error("failed to resolve next config", zap.Error(err))
+			log.Error("failed to resolve next config", zap.Error(err))
 			continue
 		}
 		c.cached.Range(func(key, value interface{}) bool {
@@ -113,22 +102,22 @@ func (c *config) Load() error {
 			return err
 		}
 		for _, v := range kvs {
-			c.logger.Debug("config loaded", zap.String("key", v.Key), zap.String("format", v.Format))
+			log.Debug("config loaded", zap.String("key", v.Key), zap.String("format", v.Format))
 		}
 		if err = c.reader.Merge(kvs...); err != nil {
-			c.logger.Error("failed to merge config source", zap.Error(err))
+			log.Error("failed to merge config source", zap.Error(err))
 			return err
 		}
 		w, err := src.Watch()
 		if err != nil {
-			c.logger.Error("failed to watch config source", zap.Error(err))
+			log.Error("failed to watch config source", zap.Error(err))
 			return err
 		}
 		c.watchers = append(c.watchers, w)
 		go c.watch(w)
 	}
 	if err := c.reader.Resolve(); err != nil {
-		c.logger.Error("failed to resolve config", zap.Error(err))
+		log.Error("failed to resolve config", zap.Error(err))
 		return err
 	}
 	return nil
