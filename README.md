@@ -9,6 +9,9 @@ Reference: [go-kratos encoding](https://github.com/go-kratos/kratos/tree/main/en
 ## log
 using [zap logger](https://github.com/uber-go/zap)
 
+## tracer
+using [OpenTelemetry](https://go.opentelemetry.io/otel) for distributed tracing.
+
 ## License
 
 This program is open-sourced software licensed under the [MIT license](./LICENSE).
